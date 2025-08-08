@@ -21,7 +21,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Rota para login do usuário
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     data = request.get_json()
     username = data.get('username')
@@ -60,6 +60,45 @@ def create_user():
         return jsonify({'message': 'Usuário criado com sucesso'}), 201
 
     return jsonify({'message': 'Dados inválidos'}), 400
+
+# Rota para obter informações do usuário atual
+@app.route('/user/<int:id_user>', methods=['GET'])
+@login_required
+def read_user(id_user):
+    user = User.query.get(id_user)
+    if user:
+        return jsonify({'username': user.username}), 200
+    return jsonify({'message': 'Usuário não encontrado'}), 404
+
+# Rota para atualizar informações do usuário
+@app.route('/user/<int:id_user>', methods=['PUT'])
+@login_required
+def update_user(id_user):
+    data = request.get_json()
+    user = User.query.get(id_user)
+
+    if user and data.get('password'):
+        user.password = data.get('password', user.password)
+        db.session.commit()
+        return jsonify({'message': f'Usuário {id_user} atualizado com sucesso'}), 200
+
+    return jsonify({'message': 'Usuário não encontrado'}), 404
+
+# Rota para deletar um usuário
+@app.route('/user/<int:id_user>', methods=['DELETE'])
+@login_required
+def delete_user(id_user):
+    user = User.query.get(id_user)
+    
+    if id_user == current_user.id:
+        return jsonify({'message': 'Você não pode deletar sua própria conta'}), 403
+
+    if user and id_user != current_user.id:  # Verifica se o usuário existe e não é o usuário atual
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'message': f'Usuário {id_user} deletado com sucesso'}), 200
+
+    return jsonify({'message': 'Usuário não encontrado'}), 404
 
 # Cria a rotina Hello World
 @app.route('/hello-world', methods=['GET'])
